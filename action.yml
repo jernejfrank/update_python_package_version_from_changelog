@@ -1,0 +1,45 @@
+name: "Python Package and Changelog Updater"
+description: "Bumps to new version in Python project from CHANGELOG"
+author: "Jernej Frank"
+
+inputs:
+  changelog_template_url:
+    description: "URL to the CHANGELOG_TEMPLATE.md in the action's repository"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Action Repository (to access bump_version.sh and CHANGELOG_TEMPLATE.md)
+      uses: actions/checkout@v4
+      with:
+        repository: jernejfrank/update_python_package_version_from_changelog
+        ref: main
+        path: action_repo  # This places the action in a subdirectory
+
+    - name: Copy or Curl CHANGELOG template
+      run: |
+        if [ -z "${{ inputs.changelog_template_url }}" ]; then
+          echo "No changelog_template_url provided, using default template from the action repo."
+          cp ./action_repo/CHANGELOG_TEMPLATE.md ./CHANGELOG_TEMPLATE.md
+        else
+          echo "changelog_template_url provided, downloading template from the specified URL."
+          curl -o CHANGELOG_TEMPLATE.md "${{ inputs.changelog_template_url }}"
+        fi
+      shell: bash
+
+    - name: Make version script executable
+      run: chmod +x ./action_repo/bump_version.sh
+      shell: bash
+
+    - name: Run version bump script (updates changelog)
+      id: bump_version
+      run: |
+        ./action_repo/bump_version.sh
+      shell: bash
+
+    - name: Cleanup temp files
+      run: |
+        rm -rf action_repo  # This will delete the 'action_repo' folder
+      continue-on-error: true
+      shell: bash
